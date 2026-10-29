@@ -1,0 +1,3 @@
+2026-10-29 22:28:24.035 SpotiMusic[4606:18197] SpotiMusic lyrics status: searching
+IOServiceMatchingfailed for: AppleM2ScalerParavirtDriver
+2026-10-29 22:28:29.444 SpotiMusic[4606:18197] SpotiMusic lyrics status: found(source: "lrc.red")

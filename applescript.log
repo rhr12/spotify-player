@@ -1,0 +1,11 @@
+Unable to find application named 'Spotify'
+Spotify not installed
+COMPILE OK   SpotiMusic/Resources/Scripts/music-artwork.txt
+COMPILE OK   SpotiMusic/Resources/Scripts/music-poll.txt
+COMPILE OK   SpotiMusic/Resources/Scripts/spotify-poll.txt
+RUN spotify-poll:
+/Users/runner/work/_temp/bb64b433-6c0d-403c-9d66-d9c18037ece8.sh: line 12: timeout: command not found
+  (exit 127)
+RUN music-poll:
+/Users/runner/work/_temp/bb64b433-6c0d-403c-9d66-d9c18037ece8.sh: line 12: timeout: command not found
+  (exit 127)
