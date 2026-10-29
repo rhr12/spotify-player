@@ -3,16 +3,20 @@ import SwiftUI
 /// Album/playlist/artist artwork with async loading and a neutral placeholder.
 struct ArtworkView: View {
     let url: URL?
+    /// Artwork already in memory (e.g. read from the Music app); takes precedence over `url`.
+    var image: NSImage?
     var cornerRadius: CGFloat = 6
     var circular = false
     var placeholderSymbol = "music.note"
 
-    @State private var image: NSImage?
+    @State private var loaded: NSImage?
+
+    private var shown: NSImage? { image ?? loaded }
 
     var body: some View {
         ZStack {
-            if let image {
-                Image(nsImage: image)
+            if let shown {
+                Image(nsImage: shown)
                     .resizable()
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fill)
@@ -42,9 +46,9 @@ struct ArtworkView: View {
             }
         }
         .task(id: url) {
-            image = url.flatMap { ImageCache.shared.cached($0) }
-            if image == nil, let url {
-                image = await ImageCache.shared.image(for: url)
+            loaded = url.flatMap { ImageCache.shared.cached($0) }
+            if loaded == nil, let url {
+                loaded = await ImageCache.shared.image(for: url)
             }
         }
     }

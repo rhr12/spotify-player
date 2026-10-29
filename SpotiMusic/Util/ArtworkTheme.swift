@@ -20,25 +20,33 @@ final class ArtworkTheme: ObservableObject {
     @Published private(set) var image: NSImage?
     @Published private(set) var palette: ArtworkPalette = .fallback
 
-    private var currentURL: URL?
+    private var currentKey: String?
     private static let context = CIContext(options: [.workingColorSpace: NSNull()])
 
-    func update(for track: Track?) {
-        let url = track?.album?.images?.largeURL
-        guard url != currentURL else { return }
-        currentURL = url
-        guard let url else {
-            image = nil
-            palette = .fallback
-            return
-        }
-        Task {
-            guard let image = await ImageCache.shared.image(for: url), self.currentURL == url else { return }
-            let palette = Self.extractPalette(from: image) ?? .fallback
-            withAnimation(.easeInOut(duration: 0.8)) {
-                self.image = image
-                self.palette = palette
+    /// Shows artwork for the current track. `key` identifies the track so late loads are ignored.
+    func update(key: String?, url: URL?, data: Data?) {
+        guard key != currentKey else { return }
+        currentKey = key
+        if let data, let image = NSImage(data: data) {
+            apply(image)
+        } else if let url {
+            Task {
+                guard let image = await ImageCache.shared.image(for: url), self.currentKey == key else { return }
+                self.apply(image)
             }
+        } else {
+            withAnimation(.easeInOut(duration: 0.8)) {
+                image = nil
+                palette = .fallback
+            }
+        }
+    }
+
+    private func apply(_ image: NSImage) {
+        let palette = Self.extractPalette(from: image) ?? .fallback
+        withAnimation(.easeInOut(duration: 0.8)) {
+            self.image = image
+            self.palette = palette
         }
     }
 

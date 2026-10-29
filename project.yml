@@ -15,6 +15,10 @@ targets:
     platform: macOS
     sources:
       - path: SpotiMusic
+        excludes:
+          - "Resources/Web/**"
+      - path: SpotiMusic/Resources/Web
+        buildPhase: resources
     settings:
       base:
         PRODUCT_NAME: SpotiMusic
@@ -38,8 +42,7 @@ targets:
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         NSHumanReadableCopyright: "SpotiMusic is not affiliated with Spotify or Apple."
         NSPrincipalClass: NSApplication
-        NSAppTransportSecurity:
-          NSAllowsLocalNetworking: true
+        NSAppleEventsUsageDescription: "SpotiMusic reads the current song and playback position from Spotify and Music so it can show synced lyrics, and sends play, pause, skip and seek commands when you use its controls."
 schemes:
   SpotiMusic:
     build:

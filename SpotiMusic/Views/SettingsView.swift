@@ -1,67 +1,61 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @EnvironmentObject private var auth: SpotifyAuth
-    @EnvironmentObject private var web: WebPlaybackHost
-    @EnvironmentObject private var library: LibraryStore
-    @AppStorage("appearance") private var appearance = Appearance.light.rawValue
+    @AppStorage(NowPlayingTrack.Source.spotify.defaultsKey) private var followSpotify = true
+    @AppStorage(NowPlayingTrack.Source.music.defaultsKey) private var followMusic = true
+    @State private var spicyKey = SpicyLyricsClient.apiKey ?? ""
+    @State private var saved = false
 
     var body: some View {
         TabView {
             Form {
-                Picker("Appearance:", selection: $appearance) {
-                    ForEach(Appearance.allCases) { Text($0.title).tag($0.rawValue) }
+                Section {
+                    Toggle("Spotify", isOn: $followSpotify)
+                    Toggle("Music", isOn: $followMusic)
+                } header: {
+                    Text("Follow what's playing in")
                 }
-                .pickerStyle(.radioGroup)
-                Text("SpotiMusic uses Light mode by default, like Apple Music.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(20)
-            .tabItem { Label("General", systemImage: "gearshape") }
-
-            Form {
-                LabeledContent("Account:") {
-                    Text(auth.isAuthorized ? (library.user?.displayName ?? library.user?.id ?? "Connected") : "Not connected")
-                }
-                LabeledContent("Client ID:") {
-                    Text(auth.clientID.isEmpty ? "—" : auth.clientID)
-                        .font(.system(size: 12, design: .monospaced))
-                        .textSelection(.enabled)
-                }
-                LabeledContent("Redirect URI:") {
-                    Text(SpotifyAuth.redirectURI)
-                        .font(.system(size: 12, design: .monospaced))
-                        .textSelection(.enabled)
-                }
-                if auth.isAuthorized {
-                    Button("Sign Out") { auth.signOut() }
-                }
-            }
-            .padding(20)
-            .tabItem { Label("Account", systemImage: "person.crop.circle") }
-
-            Form {
-                LabeledContent("Built-in player:") {
-                    Text(web.status.description)
-                        .foregroundStyle(web.status == .ready ? Color.green : Color.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                if let id = web.deviceID {
-                    LabeledContent("Device ID:") {
-                        Text(id).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
-                    }
-                }
-                Button("Restart Built-in Player") { web.restart() }
-                    .disabled(!auth.isAuthorized)
-                Text("The built-in player streams through the Spotify Web Playback SDK. When it isn't available, SpotiMusic controls Spotify on your other devices instead.")
+                Text("macOS asks once per app for permission to read what's playing (Privacy & Security ▸ Automation).")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(20)
-            .tabItem { Label("Playback", systemImage: "play.circle") }
+            .tabItem { Label("General", systemImage: "gearshape") }
+
+            Form {
+                Text("Lyrics come from am-lyrics first (lrc.red, BiniLyrics, Unison, LyricsPlus, LRCLIB and more). If none of them has the song, SpotiMusic asks Spicy Lyrics using your own API key.")
+                    .font(.system(size: 12))
+                    .fixedSize(horizontal: false, vertical: true)
+                SecureField("Spicy Lyrics API key", text: $spicyKey)
+                    .onSubmit(save)
+                HStack {
+                    Button("Save", action: save)
+                    if !spicyKey.isEmpty {
+                        Button("Remove") {
+                            spicyKey = ""
+                            save()
+                        }
+                    }
+                    if saved {
+                        Text("Saved").foregroundStyle(.secondary)
+                    }
+                }
+                Text("Optional. Stored in your Keychain. Spicy Lyrics is used only for songs playing in Spotify.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                Link("spicylyrics.org", destination: URL(string: "https://spicylyrics.org")!)
+                    .font(.system(size: 11))
+            }
+            .padding(20)
+            .tabItem { Label("Lyrics", systemImage: "quote.bubble") }
         }
-        .frame(width: 500, height: 260)
+        .frame(width: 480, height: 280)
+    }
+
+    private func save() {
+        SpicyLyricsClient.apiKey = spicyKey
+        saved = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { saved = false }
     }
 }

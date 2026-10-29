@@ -1,7 +1,7 @@
 import Foundation
 
 /// Interpolates the playback position between state updates. Kept separate from
-/// `PlayerController` so only the scrubber and lyrics re-render several times per second.
+/// the monitor so only the scrubber re-renders several times per second.
 @MainActor
 final class PlaybackClock: ObservableObject {
     @Published private(set) var positionMs = 0
