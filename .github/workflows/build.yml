@@ -23,7 +23,27 @@ jobs:
         run: xcodebuild -version
 
       - name: Build app
-        run: ./scripts/build.sh
+        run: |
+          set -o pipefail
+          ./scripts/build.sh 2>&1 | tee build.log
+
+      - name: Report compiler errors
+        if: failure()
+        run: |
+          grep -E "error: " build.log | sed -E 's#^.*/SpotiMusic/##' | sort -u > errors.txt || true
+          # Annotations are capped at 10 per type per step, so spread them over three types.
+          sed -n '1,10p' errors.txt | while IFS= read -r l; do echo "::error::$l"; done
+          sed -n '11,20p' errors.txt | while IFS= read -r l; do echo "::warning::$l"; done
+          sed -n '21,30p' errors.txt | while IFS= read -r l; do echo "::notice::$l"; done
+          echo "Total errors: $(wc -l < errors.txt)"
+          exit 1
+
+      - name: Report more compiler errors
+        if: failure()
+        run: |
+          sed -n '31,40p' errors.txt | while IFS= read -r l; do echo "::error::$l"; done
+          sed -n '41,50p' errors.txt | while IFS= read -r l; do echo "::warning::$l"; done
+          sed -n '51,60p' errors.txt | while IFS= read -r l; do echo "::notice::$l"; done
 
       - name: Package DMG
         run: ./scripts/package_dmg.sh
