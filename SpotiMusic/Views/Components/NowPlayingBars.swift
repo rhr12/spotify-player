@@ -15,8 +15,8 @@ struct NowPlayingBars: View {
                 HStack(alignment: .bottom, spacing: spacing) {
                     ForEach(0..<barCount, id: \.self) { index in
                         let phase = Double(index) * 1.7
-                        let level = isPlaying
-                            ? 0.3 + 0.7 * abs(sin(time * (2.2 + Double(index % 3) * 0.6) + phase))
+                        let level: CGFloat = isPlaying
+                            ? CGFloat(0.3 + 0.7 * abs(sin(time * (2.2 + Double(index % 3) * 0.6) + phase)))
                             : 0.25
                         RoundedRectangle(cornerRadius: barWidth / 2)
                             .fill(color)

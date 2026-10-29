@@ -18,7 +18,7 @@ struct ProgressSlider: View {
     var body: some View {
         GeometryReader { geometry in
             let width = max(geometry.size.width, 1)
-            let fraction = min(max(dragValue ?? value, 0), 1)
+            let fraction = CGFloat(min(max(dragValue ?? value, 0), 1))
             let barHeight = isActive ? height + 2 : height
             ZStack(alignment: .leading) {
                 Capsule().fill(trackColor)
@@ -39,12 +39,12 @@ struct ProgressSlider: View {
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { gesture in
-                        let newValue = min(max(gesture.location.x / width, 0), 1)
+                        let newValue = Double(min(max(gesture.location.x / width, 0), 1))
                         dragValue = newValue
                         onScrub?(newValue)
                     }
                     .onEnded { gesture in
-                        let newValue = min(max(gesture.location.x / width, 0), 1)
+                        let newValue = Double(min(max(gesture.location.x / width, 0), 1))
                         dragValue = nil
                         onCommit(newValue)
                     }

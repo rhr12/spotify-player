@@ -41,7 +41,7 @@ struct NowPlayingBackground: View {
             TimelineView(.animation(minimumInterval: 1 / 24, paused: !isPlaying)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate * 0.12
                 Canvas { canvas, size in
-                    let blobs: [(Color, Double, Double, Double)] = [
+                    let blobs: [(Color, Double, CGFloat, Double)] = [
                         (palette.primary, 0.0, 0.55, 0.62),
                         (palette.tertiary, 2.1, 0.45, 0.5),
                         (palette.secondary, 4.2, 0.6, 0.7),
@@ -49,8 +49,8 @@ struct NowPlayingBackground: View {
                     for (color, phase, radiusFactor, alpha) in blobs {
                         let radius = max(size.width, size.height) * radiusFactor
                         let center = CGPoint(
-                            x: size.width * (0.5 + 0.3 * cos(t + phase)),
-                            y: size.height * (0.5 + 0.28 * sin(t * 1.3 + phase))
+                            x: size.width * CGFloat(0.5 + 0.3 * cos(t + phase)),
+                            y: size.height * CGFloat(0.5 + 0.28 * sin(t * 1.3 + phase))
                         )
                         let rect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
                         canvas.fill(
