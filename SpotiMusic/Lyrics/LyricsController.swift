@@ -14,7 +14,9 @@ final class LyricsController: NSObject, ObservableObject {
         case notFound(reason: String)
     }
 
-    @Published private(set) var status: Status = .idle
+    @Published private(set) var status: Status = .idle {
+        didSet { if status != oldValue { NSLog("SpotiMusic lyrics status: %@", String(describing: status)) } }
+    }
 
     let webView: WKWebView
     var onSeek: ((Int) -> Void)?
@@ -96,6 +98,8 @@ final class LyricsController: NSObject, ObservableObject {
         case "notFound":
             guard id == requestID else { return }
             trySpicyLyrics()
+        case "log":
+            NSLog("SpotiMusic lyrics page: %@", message["message"] as? String ?? "")
         case "seek":
             if let ms = message["ms"] as? Double { onSeek?(Int(ms)) }
         default:
@@ -166,6 +170,8 @@ final class LyricsController: NSObject, ObservableObject {
     <script type="module">
       const el = document.getElementById('lyrics');
       const post = (m) => window.webkit.messageHandlers.native.postMessage(JSON.stringify(m));
+      window.addEventListener('error', (e) => post({ type: 'log', message: `${e.message} (${e.filename}:${e.lineno})` }));
+      window.addEventListener('unhandledrejection', (e) => post({ type: 'log', message: `Unhandled rejection: ${e.reason}` }));
       let anchor = { pos: 0, at: performance.now(), playing: false };
       let current = 0;
 
@@ -200,8 +206,8 @@ final class LyricsController: NSObject, ObservableObject {
       window.spoti = {
         load(meta) {
           current = meta.id;
+          // Note: don't touch `duration` here; -1 makes am-lyrics skip fetching in that update.
           el.ttml = undefined;
-          el.duration = -1;
           el.songTitle = meta.title;
           el.songArtist = meta.artist;
           el.songAlbum = meta.album || undefined;

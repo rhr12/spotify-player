@@ -71,15 +71,15 @@ private struct PlayerColumn: View {
 
     private var artSize: CGFloat {
         let widthShare = compact ? max(340, size.width * 0.42) * 0.72 : size.width * 0.5
-        return max(180, min(size.height * 0.48, widthShare, 520))
+        return max(160, min(size.height * 0.44, widthShare, 520))
     }
     private var controlsWidth: CGFloat { max(min(artSize, 440), 300) }
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 44)
+            Spacer(minLength: 40)
             BreathingArtwork(url: track.artworkURL, image: monitorImage, size: artSize, isPlaying: monitor.isPlaying)
-            Spacer(minLength: 26)
+            Spacer(minLength: 18)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 10) {
                     Text(track.title)
@@ -111,8 +111,8 @@ private struct PlayerColumn: View {
             }
 
             SourceChip(source: track.source)
-                .padding(.top, 22)
-            Spacer(minLength: 30)
+                .padding(.top, 18)
+            Spacer(minLength: 20)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 28)

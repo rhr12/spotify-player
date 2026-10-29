@@ -1,0 +1,5 @@
+tell application id "com.apple.Music"
+	try
+		return raw data of artwork 1 of current track
+	end try
+end tell

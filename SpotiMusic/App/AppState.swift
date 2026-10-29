@@ -39,9 +39,7 @@ final class AppState: ObservableObject {
             .compactMap { $0 }
             .sink { [weak self] data in
                 guard let self, let track = self.monitor.track else { return }
-                // Music artwork arrives after the track; force the theme to take it.
-                self.theme.update(key: nil, url: nil, data: nil)
-                self.theme.update(key: track.key, url: nil, data: data)
+                self.theme.setArtwork(data, key: track.key)
             }
             .store(in: &cancellables)
 

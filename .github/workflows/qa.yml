@@ -1,0 +1,86 @@
+name: Visual QA
+
+# Builds a Debug app on a Mac, syntax-checks the AppleScripts, launches the app in its
+# debug demo mode with a real song (real artwork and real lyrics lookups), and publishes
+# screenshots and logs to the `ci-screenshots` branch.
+on:
+  push:
+    branches: ["**", "!ci-screenshots"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  qa:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          brew install xcodegen
+          brew install --cask spotify || echo "Spotify cask unavailable"
+
+      - name: Syntax-check AppleScripts
+        run: |
+          mkdir -p qa
+          for f in SpotiMusic/Resources/Scripts/*.txt; do
+            if osacompile -o "/tmp/$(basename "$f" .txt).scpt" "$f" 2>>qa/osacompile.log; then
+              echo "OK   $f" >> qa/osacompile.log
+            else
+              echo "FAIL $f" >> qa/osacompile.log
+            fi
+          done
+          cat qa/osacompile.log
+
+      - name: Build Debug app
+        run: |
+          xcodegen generate
+          xcodebuild -project SpotiMusic.xcodeproj -scheme SpotiMusic -configuration Debug \
+            -derivedDataPath build/dd CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO -quiet build
+
+      - name: Capture screenshots
+        run: |
+          APP="$PWD/build/dd/Build/Products/Debug/SpotiMusic.app/Contents/MacOS/SpotiMusic"
+          system_profiler SPDisplaysDataType | grep -i resolution > qa/display.txt || true
+          ART=$(curl -fsS "https://open.spotify.com/oembed?url=https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b" \
+                | python3 -c 'import json,sys; print(json.load(sys.stdin).get("thumbnail_url",""))' || true)
+          echo "artwork: $ART" > qa/artwork.txt
+
+          shot() {
+            local name=$1 wait=$2; shift 2
+            env "$@" "$APP" > "qa/$name.log" 2>&1 &
+            local pid=$!
+            sleep "$wait"
+            screencapture -x "qa/$name.png" || echo "screencapture failed" >> "qa/$name.log"
+            kill "$pid" || true
+            sleep 2
+          }
+
+          song=(SPOTIMUSIC_DEMO_TITLE="Blinding Lights" SPOTIMUSIC_DEMO_ARTIST="The Weeknd"
+                SPOTIMUSIC_DEMO_ALBUM="After Hours" SPOTIMUSIC_DEMO_DURATION_MS=200040
+                SPOTIMUSIC_DEMO_SPOTIFY_ID=0VjIjW4GlUZAMYd2vXMi3b SPOTIMUSIC_DEMO_ARTWORK="$ART")
+
+          defaults write com.spotimusic.app showLyrics -bool true
+          shot 1-playing-lyrics 25 "${song[@]}" SPOTIMUSIC_DEMO_POSITION_MS=55000
+          shot 2-paused 20 "${song[@]}" SPOTIMUSIC_DEMO_POSITION_MS=30000 SPOTIMUSIC_DEMO_PAUSED=1
+          shot 3-not-found 30 SPOTIMUSIC_DEMO_TITLE="Qzxv Wrrbl Not A Real Song" SPOTIMUSIC_DEMO_ARTIST="Nobody Zzyzx" \
+               SPOTIMUSIC_DEMO_DURATION_MS=123000
+          shot 4-nothing-playing 8
+          defaults write com.spotimusic.app showLyrics -bool false
+          shot 5-lyrics-hidden 15 "${song[@]}" SPOTIMUSIC_DEMO_POSITION_MS=55000
+          defaults delete com.spotimusic.app || true
+
+      - name: Publish to ci-screenshots branch
+        if: always()
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd qa
+          echo "${GITHUB_SHA}" > COMMIT.txt
+          git init -q
+          git checkout -q -b ci-screenshots
+          git add -A
+          git -c user.name="ci" -c user.email="ci@users.noreply.github.com" commit -qm "Visual QA for ${GITHUB_SHA}"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-screenshots

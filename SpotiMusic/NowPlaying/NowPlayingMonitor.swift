@@ -80,6 +80,9 @@ final class NowPlayingMonitor: ObservableObject {
     private var observers: [NSObjectProtocol] = []
 
     func start() {
+        #if DEBUG
+        if startDemoIfRequested() { return }
+        #endif
         let center = DistributedNotificationCenter.default()
         for name in ["com.spotify.client.PlaybackStateChanged", "com.apple.Music.playerInfo"] {
             observers.append(center.addObserver(forName: Notification.Name(name), object: nil, queue: .main) { [weak self] _ in
@@ -166,14 +169,7 @@ final class NowPlayingMonitor: ObservableObject {
     }
 
     private func loadMusicArtwork(for track: NowPlayingTrack) async {
-        let script = """
-        tell application id "com.apple.Music"
-            try
-                return raw data of artwork 1 of current track
-            end try
-        end tell
-        """
-        guard case .success(let result) = await runner.run(script), self.track?.key == track.key else { return }
+        guard case .success(let result) = await runner.run(Self.script(named: "music-artwork")), self.track?.key == track.key else { return }
         let data = result.data
         if !data.isEmpty { artworkData = data }
     }
@@ -242,33 +238,41 @@ final class NowPlayingMonitor: ObservableObject {
         await poll()
     }
 
+    #if DEBUG
+    /// Debug builds only: `SPOTIMUSIC_DEMO_TITLE` etc. inject a track without asking any app,
+    /// so CI can screenshot the real UI and real lyrics lookups on a machine with no music app.
+    private func startDemoIfRequested() -> Bool {
+        let env = ProcessInfo.processInfo.environment
+        guard let title = env["SPOTIMUSIC_DEMO_TITLE"] else { return false }
+        track = NowPlayingTrack(
+            source: .spotify,
+            title: title,
+            artist: env["SPOTIMUSIC_DEMO_ARTIST"] ?? "",
+            album: env["SPOTIMUSIC_DEMO_ALBUM"] ?? "",
+            durationMs: Int(env["SPOTIMUSIC_DEMO_DURATION_MS"] ?? "") ?? 200_000,
+            spotifyID: env["SPOTIMUSIC_DEMO_SPOTIFY_ID"],
+            persistentID: nil,
+            artworkURL: env["SPOTIMUSIC_DEMO_ARTWORK"].flatMap(URL.init(string:))
+        )
+        isPlaying = env["SPOTIMUSIC_DEMO_PAUSED"] == nil
+        volume = 0.7
+        anchor(Int(env["SPOTIMUSIC_DEMO_POSITION_MS"] ?? "") ?? 0)
+        return true
+    }
+    #endif
+
     // MARK: Scripts
 
+    /// Scripts live in Resources/Scripts (as .txt so Xcode copies rather than compiles them),
+    /// which lets CI syntax-check them with `osacompile`.
     private static func pollScript(for source: NowPlayingTrack.Source) -> String {
-        switch source {
-        case .spotify:
-            return """
-            tell application id "com.spotify.client"
-                set ps to player state as string
-                if ps is "stopped" then return {ps}
-                set t to current track
-                return {ps, name of t, artist of t, album of t, (duration of t) as string, (player position) as string, id of t, artwork url of t, (sound volume) as string}
-            end tell
-            """
-        case .music:
-            return """
-            tell application id "com.apple.Music"
-                set ps to player state as string
-                if ps is "stopped" then return {ps}
-                try
-                    set t to current track
-                    return {ps, name of t, artist of t, album of t, (duration of t) as string, (player position) as string, persistent ID of t, "", (sound volume) as string}
-                on error
-                    return {ps}
-                end try
-            end tell
-            """
-        }
+        script(named: source == .spotify ? "spotify-poll" : "music-poll")
+    }
+
+    private static func script(named name: String) -> String {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "txt"),
+              let source = try? String(contentsOf: url, encoding: .utf8) else { return "return {\"stopped\"}" }
+        return source
     }
 
     private static func snapshot(from result: NSAppleEventDescriptor, source: NowPlayingTrack.Source) -> Snapshot {

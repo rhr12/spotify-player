@@ -42,6 +42,12 @@ final class ArtworkTheme: ObservableObject {
         }
     }
 
+    /// Artwork that arrives after the track (the Music app's embedded artwork).
+    func setArtwork(_ data: Data, key: String) {
+        guard key == currentKey, let image = NSImage(data: data) else { return }
+        apply(image)
+    }
+
     private func apply(_ image: NSImage) {
         let palette = Self.extractPalette(from: image) ?? .fallback
         withAnimation(.easeInOut(duration: 0.8)) {

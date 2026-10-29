@@ -1,0 +1,10 @@
+tell application id "com.apple.Music"
+	set ps to player state as string
+	if ps is "stopped" then return {ps}
+	try
+		set t to current track
+		return {ps, name of t, artist of t, album of t, (duration of t) as string, (player position) as string, persistent ID of t, "", (sound volume) as string}
+	on error
+		return {ps}
+	end try
+end tell

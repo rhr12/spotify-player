@@ -1,0 +1,6 @@
+tell application id "com.spotify.client"
+	set ps to player state as string
+	if ps is "stopped" then return {ps}
+	set t to current track
+	return {ps, name of t, artist of t, album of t, (duration of t) as string, (player position) as string, id of t, artwork url of t, (sound volume) as string}
+end tell
