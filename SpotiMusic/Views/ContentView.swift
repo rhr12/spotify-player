@@ -307,7 +307,7 @@ private struct EmptyStateView: View {
                     NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation")!)
                 }
             } else {
-                Text("Start a song in Spotify or Music. SpotiMusic follows along with time-synced lyrics.")
+                Text("Start a song in Spotify or Music and SpotiMusic will follow along with synced lyrics.")
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 420)
                     .foregroundStyle(.white.opacity(0.65))

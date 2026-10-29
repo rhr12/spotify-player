@@ -28,16 +28,20 @@ struct NowPlayingBackground: View {
 
     var body: some View {
         ZStack {
+            // The image sits in an overlay so its fill size can't stretch the window's layout.
             palette.secondary
-            if let image {
-                Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .scaleEffect(1.4)
-                    .blur(radius: 90)
-                    .saturation(1.3)
-                    .opacity(0.75)
-            }
+                .overlay {
+                    if let image {
+                        Image(nsImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .scaleEffect(1.4)
+                            .blur(radius: 90)
+                            .saturation(1.3)
+                            .opacity(0.75)
+                    }
+                }
+                .clipped()
             TimelineView(.animation(minimumInterval: 1 / 24, paused: !isPlaying)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate * 0.12
                 Canvas { canvas, size in

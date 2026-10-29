@@ -22,17 +22,25 @@ jobs:
           brew install xcodegen
           brew install --cask spotify || echo "Spotify cask unavailable"
 
-      - name: Syntax-check AppleScripts
+      - name: Check AppleScripts against the real apps
         run: |
           mkdir -p qa
-          for f in SpotiMusic/Resources/Scripts/*.txt; do
-            if osacompile -o "/tmp/$(basename "$f" .txt).scpt" "$f" 2>>qa/osacompile.log; then
-              echo "OK   $f" >> qa/osacompile.log
-            else
-              echo "FAIL $f" >> qa/osacompile.log
-            fi
-          done
-          cat qa/osacompile.log
+          {
+            open -a Spotify || echo "Spotify not installed"
+            open -a Music || echo "Music not available"
+            sleep 15
+            for f in SpotiMusic/Resources/Scripts/*.txt; do
+              if osacompile -o "/tmp/$(basename "$f" .txt).scpt" "$f"; then echo "COMPILE OK   $f"; else echo "COMPILE FAIL $f"; fi
+            done
+            # Running needs Automation permission, which CI may not have; record whatever happens.
+            for f in spotify-poll music-poll; do
+              echo "RUN $f:"
+              timeout 30 osascript "SpotiMusic/Resources/Scripts/$f.txt" || echo "  (exit $?)"
+            done
+            osascript -e 'tell application "Spotify" to quit' || true
+            osascript -e 'tell application "Music" to quit' || true
+          } > qa/applescript.log 2>&1 < /dev/null
+          cat qa/applescript.log
 
       - name: Build Debug app
         run: |

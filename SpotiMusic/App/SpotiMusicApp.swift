@@ -13,7 +13,7 @@ struct SpotiMusicApp: App {
                 .environmentObject(app.theme)
         }
         .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 1120, height: 740)
+        .defaultSize(width: 1080, height: 700)
         .commands {
             ControlsCommands(app: app, monitor: app.monitor)
         }
