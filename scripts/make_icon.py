@@ -6,37 +6,46 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "SpotiMusic", "Resources", "
 os.makedirs(OUT, exist_ok=True)
 S = 1024
 
-def lerp(a, b, t):
-    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+SS = 4  # supersampling factor for smooth edges
 
 def master():
-    top, bottom = (252, 92, 125), (250, 35, 59)
-    grad = Image.new("RGB", (S, S))
-    px = grad.load()
-    for y in range(S):
-        for x in range(S):
-            px[x, y] = lerp(top, bottom, min(1, (y * 0.8 + x * 0.2) / S))
-    # macOS icon grid: 824pt rounded rect centered in 1024 canvas with drop shadow.
-    inset, radius = 100, 185
-    mask = Image.new("L", (S, S), 0)
-    ImageDraw.Draw(mask).rounded_rectangle((inset, inset, S - inset, S - inset), radius, fill=255)
+    N = S * SS
+    top, bottom = (93, 201, 175), (86, 186, 160)
+    grad = Image.new("RGB", (1, N))
+    for y in range(N):
+        t = y / N
+        grad.putpixel((0, y), tuple(int(top[i] + (bottom[i] - top[i]) * t) for i in range(3)))
+    grad = grad.resize((N, N))
+    # macOS icon grid: 824pt rounded square centered on the 1024 canvas, with a soft drop shadow.
+    inset, radius = 100 * SS, 185 * SS
+    mask = Image.new("L", (N, N), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((inset, inset, N - inset, N - inset), radius, fill=255)
+    icon = grad.convert("RGBA")
+    icon.putalpha(mask)
+
+    # White eighth-note pair with a slanted beam (traced from the reference artwork).
+    def pt(x, y):  # reference image coordinates -> supersampled canvas
+        k = 824 / 276 * SS
+        return (100 * SS + (x - 68) * k, 100 * SS + (y - 22) * k)
+
+    note = Image.new("L", (N, N), 0)
+    d = ImageDraw.Draw(note)
+    d.polygon([pt(162, 97), pt(259, 79), pt(259, 111), pt(162, 128)], fill=255)  # slanted beam
+    d.rectangle((*pt(162, 100), *pt(179, 214)), fill=255)                       # left stem
+    d.rectangle((*pt(242, 82), *pt(259, 198)), fill=255)                        # right stem
+    d.ellipse((*pt(121, 190), *pt(181, 237)), fill=255)                         # left head
+    d.ellipse((*pt(203, 173), *pt(261, 221)), fill=255)                         # right head
+    # Blur + threshold rounds the corners like the reference glyph.
+    note = note.filter(ImageFilter.GaussianBlur(5 * SS * 3)).point(lambda v: 255 if v > 128 else 0)
+    note = note.filter(ImageFilter.GaussianBlur(SS / 2))
+    icon.paste(Image.new("RGBA", (N, N), (255, 255, 255, 255)), (0, 0), note)
+
+    icon = icon.resize((S, S), Image.LANCZOS)
     shadow = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    ImageDraw.Draw(shadow).rounded_rectangle((inset, inset + 12, S - inset, S - inset + 12), radius, fill=(0, 0, 0, 90))
+    ImageDraw.Draw(shadow).rounded_rectangle((100, 112, S - 100, S - 88), 185, fill=(0, 0, 0, 90))
     shadow = shadow.filter(ImageFilter.GaussianBlur(18))
-    icon = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    icon.alpha_composite(shadow)
-    body = grad.convert("RGBA")
-    body.putalpha(mask)
-    icon.alpha_composite(body)
-    # White double eighth note.
-    d = ImageDraw.Draw(icon)
-    w = (255, 255, 255, 255)
-    d.ellipse((300, 610, 440, 715), fill=w)
-    d.ellipse((560, 560, 700, 665), fill=w)
-    d.rectangle((410, 330, 440, 665), fill=w)
-    d.rectangle((670, 280, 700, 615), fill=w)
-    d.polygon([(410, 330), (700, 280), (700, 360), (410, 410)], fill=w)
-    return icon
+    shadow.alpha_composite(icon)
+    return shadow
 
 m = master()
 images = []
